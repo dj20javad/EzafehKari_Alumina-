@@ -18,8 +18,7 @@
     
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Lucide Icons (نسخه داخلی برای جلوگیری از خطا) -->
+
     <style>
         body { -webkit-tap-highlight-color: transparent; user-select: none; font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
         input, textarea { user-select: text; }
@@ -333,7 +332,7 @@
                         </div>
                         <div className="flex gap-2">
                             <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600 font-bold px-2">انصراف</button>
-                            <button onClick={onNext} className="bg-slate-900 text-white text-xs px-4 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors">
+                            <button onClick={activeStep === steps.length - 1 ? onClose : onNext} className="bg-slate-900 text-white text-xs px-4 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors">
                                 {activeStep === steps.length - 1 ? 'پایان' : 'بعدی'}
                             </button>
                         </div>
@@ -432,6 +431,7 @@
                       currentShift.type === 'rest' ? 'bg-emerald-100 text-emerald-700' : 
                       currentShift.type === 'night' ? 'bg-slate-800 text-white' : 
                       currentShift.type === 'day' ? 'bg-amber-100 text-amber-800' :
+                      // رنگ شیفت صبح اصلاح شده به زرد/نارنجی
                       currentShift.type === 'morning' ? 'bg-yellow-100 text-yellow-700' : 
                       'bg-blue-100 text-blue-700'
                   }`}>
@@ -439,6 +439,7 @@
                       {currentShift.type === 'morning' && <Icon name="Sunrise" size={12}/>}
                       {currentShift.type === 'afternoon' && <Icon name="Sunset" size={12}/>}
                       {currentShift.type === 'day' && <Icon name="Sun" size={12}/>}
+                      {/* نمایش آیکون فنجان برای تمام روزهای استراحت */}
                       {currentShift.type === 'rest' && <Icon name="Coffee" size={12}/>}
                       {currentShift.name} {currentShift.isFirstRest && '(اول)'}
                   </div>
@@ -577,7 +578,7 @@
            ========================================= */
 
         const App = () => {
-          const [version] = useState("2.5.2");
+          const [version] = useState("2.6.0");
           const [view, setView] = useState('main'); 
           const [section, setSection] = useState('factory');
           const [shiftType, setShiftType] = useState('day');
@@ -803,6 +804,7 @@
               setDescLoading(false);
           };
 
+          // دکمه‌های تغییر تاریخ مبنا (Settings)
           const changeBaseDate = (days) => {
               const current = baseDateJalali || getTodayJalali();
               const gObj = jalaali.toGregorian(current.jy, current.jm, current.jd);
@@ -894,7 +896,29 @@
           const confirmAction = () => { if (modal.type === 'delete_one') setRecords(records.filter(r => r.id !== modal.data)); else if (modal.type === 'delete_all') setRecords([]); setModal({ isOpen: false, type: null, data: null }); };
           const closeModal = () => setModal({ isOpen: false, type: null, data: null });
           const handleBackup = () => { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records)); const a = document.createElement('a'); a.href = dataStr; a.download = "backup_alumina.json"; document.body.appendChild(a); a.click(); a.remove(); };
-          const handleRestore = (e) => { const reader = new FileReader(); reader.readAsText(e.target.files[0], "UTF-8"); reader.onload = evt => { try { setRecords(JSON.parse(evt.target.result)); alert("بازگردانی شد"); } catch { alert("فایل نامعتبر"); } }; };
+          
+          // Restore Function Fixed Logic
+          const handleRestore = (e) => { 
+             const file = e.target.files[0];
+             if (!file) return;
+             const reader = new FileReader(); 
+             reader.readAsText(file, "UTF-8"); 
+             reader.onload = evt => { 
+                 try { 
+                     const data = JSON.parse(evt.target.result); 
+                     if (Array.isArray(data)) {
+                         setRecords(data); 
+                         alert("اطلاعات با موفقیت بازگردانی شد."); 
+                     } else {
+                         alert("فرمت فایل پشتیبان صحیح نیست.");
+                     }
+                 } catch { 
+                     alert("خطا در خواندن فایل."); 
+                 } 
+             }; 
+             // Reset the input value to allow selecting the same file again
+             e.target.value = '';
+          };
 
           if (view === 'settings') {
             return (
